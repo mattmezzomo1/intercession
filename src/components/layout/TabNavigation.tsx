@@ -1,10 +1,11 @@
-import { Home, TrendingUp, Plus, User } from "lucide-react";
+import { Home, TrendingUp, Plus, User, BookHeart } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 
 const tabs = [
   { id: "feed", path: "/", icon: Home, label: "Início" },
   { id: "trending", path: "/trending", icon: TrendingUp, label: "Em Alta" },
+  { id: "my-requests", path: "/my-requests", icon: BookHeart, label: "Meus Pedidos" },
   { id: "profile", path: "/profile", icon: User, label: "Perfil" }
 ];
 

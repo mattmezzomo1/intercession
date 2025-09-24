@@ -160,8 +160,7 @@ export default function Feed() {
                 className="flex-1 border-2"
                 onClick={() => handleSwipe('left')}
               >
-                <MessageCircle className="h-4 w-4 mr-2" />
-                Comentar
+                Passar
               </Button>
               <Button
                 size="lg"
@@ -179,7 +178,7 @@ export default function Feed() {
       {/* Swipe Instructions */}
       <div className="p-4 text-center">
         <p className="text-sm text-muted-foreground">
-          Deslize para cima para comentar • Deslize para a direita para orar
+          Deslize para a esquerda para passar • Deslize para a direita para orar
         </p>
       </div>
     </div>

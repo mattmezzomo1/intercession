@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Feed from "./pages/Feed";
 import Publish from "./pages/Publish";
 import Trending from "./pages/Trending";
+import MyRequests from "./pages/MyRequests";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import { TabNavigation } from "./components/layout/TabNavigation";
@@ -23,6 +24,7 @@ const App = () => (
             <Route path="/" element={<Feed />} />
             <Route path="/publish" element={<Publish />} />
             <Route path="/trending" element={<Trending />} />
+            <Route path="/my-requests" element={<MyRequests />} />
             <Route path="/profile" element={<Profile />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
