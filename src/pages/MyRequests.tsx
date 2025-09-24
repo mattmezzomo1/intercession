@@ -85,16 +85,16 @@ export default function MyRequests() {
       </header>
 
       {/* Requests List */}
-      <div className="flex-1 p-4 space-y-4">
+      <div className="flex-1 p-4 space-y-3">
         {mockMyRequests.map((request) => (
           <Card key={request.id} className="overflow-hidden">
             <CardContent className="p-4">
               {/* Header */}
               <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <Badge 
                     variant="outline"
-                    className={getStatusColor(request.status)}
+                    className={`${getStatusColor(request.status)} text-xs`}
                   >
                     {getStatusLabel(request.status)}
                   </Badge>
@@ -105,26 +105,26 @@ export default function MyRequests() {
                     {request.category}
                   </Badge>
                 </div>
-                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                <div className="flex items-center gap-1 text-xs text-muted-foreground ml-2">
                   <Clock className="h-3 w-3" />
                   {request.timeAgo}
                 </div>
               </div>
 
               {/* Content */}
-              <p className="text-foreground leading-relaxed mb-4">
+              <p className="text-sm text-foreground leading-relaxed mb-3 line-clamp-3">
                 {request.content}
               </p>
 
               {/* Stats */}
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3 text-xs text-muted-foreground">
                   <div className="flex items-center gap-1">
-                    <Heart className="h-4 w-4 text-prayer-intercession" />
-                    <span>{request.intercessions} orações</span>
+                    <Heart className="h-3 w-3 text-prayer-intercession" />
+                    <span>{request.intercessions}</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <MessageCircle className="h-4 w-4" />
+                    <MessageCircle className="h-3 w-3" />
                     <span>{request.comments}</span>
                   </div>
                 </div>
@@ -132,15 +132,15 @@ export default function MyRequests() {
 
               {/* Actions */}
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" className="flex-1">
+                <Button size="sm" variant="outline" className="flex-1 text-xs">
                   <Edit className="h-3 w-3 mr-1" />
                   Editar
                 </Button>
-                <Button variant="outline" size="sm" className="flex-1">
+                <Button size="sm" variant="outline" className="flex-1 text-xs">
                   <MessageCircle className="h-3 w-3 mr-1" />
-                  Ver Comentários
+                  Comentários
                 </Button>
-                <Button variant="outline" size="sm">
+                <Button size="sm" variant="outline" className="px-2">
                   <Archive className="h-3 w-3" />
                 </Button>
               </div>

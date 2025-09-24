@@ -1,8 +1,11 @@
 import { useState } from "react";
-import { Heart, MessageCircle, MoreHorizontal, Clock } from "lucide-react";
+import { Heart, MessageCircle, MoreHorizontal, Clock, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
 
 interface PrayerRequest {
   id: string;
@@ -52,11 +55,57 @@ const mockPrayerRequests: PrayerRequest[] = [
 ];
 
 export default function Feed() {
+  const { toast } = useToast();
   const [currentCard, setCurrentCard] = useState(0);
   const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
+  const [showCommentModal, setShowCommentModal] = useState(false);
+  const [comment, setComment] = useState("");
 
   const handleSwipe = (direction: 'left' | 'right') => {
+    if (direction === 'right') {
+      setShowCommentModal(true);
+      return;
+    }
+    
     setSwipeDirection(direction);
+    
+    setTimeout(() => {
+      setCurrentCard(prev => (prev + 1) % mockPrayerRequests.length);
+      setSwipeDirection(null);
+    }, 300);
+  };
+
+  const handlePrayWithComment = () => {
+    setSwipeDirection('right');
+    setShowCommentModal(false);
+    
+    if (comment.trim()) {
+      toast({
+        title: "Oração e comentário enviados! 🙏",
+        description: "Sua intercessão foi registrada com carinho.",
+      });
+    } else {
+      toast({
+        title: "Oração enviada! 🙏",
+        description: "Sua intercessão foi registrada.",
+      });
+    }
+    
+    setTimeout(() => {
+      setCurrentCard(prev => (prev + 1) % mockPrayerRequests.length);
+      setSwipeDirection(null);
+      setComment("");
+    }, 300);
+  };
+
+  const handleSkipComment = () => {
+    setSwipeDirection('right');
+    setShowCommentModal(false);
+    
+    toast({
+      title: "Oração enviada! 🙏",
+      description: "Sua intercessão foi registrada.",
+    });
     
     setTimeout(() => {
       setCurrentCard(prev => (prev + 1) % mockPrayerRequests.length);
@@ -181,6 +230,39 @@ export default function Feed() {
           Deslize para a esquerda para passar • Deslize para a direita para orar
         </p>
       </div>
+
+      {/* Comment Modal */}
+      <Dialog open={showCommentModal} onOpenChange={setShowCommentModal}>
+        <DialogContent className="mx-4 max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-center">Deseja adicionar um comentário?</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <Textarea
+              placeholder="Escreva uma palavra de encorajamento, versículo ou mensagem de fé..."
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              className="min-h-[100px] resize-none"
+            />
+          </div>
+          <DialogFooter className="flex-col gap-2 sm:flex-row">
+            <Button
+              variant="outline"
+              onClick={handleSkipComment}
+              className="w-full sm:w-auto"
+            >
+              Apenas Orar
+            </Button>
+            <Button
+              onClick={handlePrayWithComment}
+              className="w-full sm:w-auto bg-gradient-heaven hover:opacity-90"
+            >
+              <Send className="h-4 w-4 mr-2" />
+              Orar + Comentar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
