@@ -1,4 +1,25 @@
-# Welcome to your Lovable project
+# Luminews - Corrente de Oração
+
+Uma plataforma de pedidos de oração e intercessão que conecta cristãos de todo o mundo para orarem uns pelos outros e compartilharem testemunhos da fidelidade de Deus.
+
+## Fluxo da Aplicação
+
+### Para Novos Usuários
+1. **Landing Page** (`/`) - Página inicial com apresentação do Luminews
+2. **Onboarding** (`/onboarding`) - Explicação detalhada de como funciona a plataforma
+3. **Registro** (`/register`) - Criação de conta
+4. **Login** (`/login`) - Acesso à conta
+
+### Para Usuários Autenticados
+- **Feed** (`/feed`) - Página principal com pedidos de oração
+- **Em Alta** (`/trending`) - Pedidos que mais receberam orações
+- **Diário** (`/diary`) - Palavra do dia e reflexões espirituais
+- **Meus Pedidos** (`/my-requests`) - Acompanhamento dos próprios pedidos
+- **Perfil** (`/profile`) - Configurações e informações pessoais
+
+## Conceito: "Enquanto cuidamos uns dos outros, Deus cuida de nós"
+
+O Luminews é mais que uma plataforma - é um ecossistema onde cristãos se edificam mutuamente através da oração, criando uma corrente ininterrupta de amor e intercessão.
 
 ## Project info
 

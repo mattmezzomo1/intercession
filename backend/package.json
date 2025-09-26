@@ -1,0 +1,80 @@
+{
+  "name": "intercede-together-backend",
+  "version": "1.0.0",
+  "description": "Backend API for Intercede Together prayer app",
+  "main": "dist/app.js",
+  "scripts": {
+    "dev": "tsx watch src/app.ts",
+    "build": "tsc",
+    "start": "node dist/app.js",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate dev",
+    "db:migrate:deploy": "prisma migrate deploy",
+    "db:studio": "prisma studio",
+    "db:seed": "tsx src/seed.ts",
+    "test:word-of-day": "tsx src/scripts/testWordOfDay.ts",
+    "test:screenshot": "tsx src/scripts/testScreenshotOnly.ts",
+    "test:r2-upload": "tsx src/scripts/testR2Upload.ts",
+    "setup:stripe": "tsx src/scripts/setupStripe.ts",
+    "clean:prayers": "tsx src/scripts/cleanPrayerRequests.ts",
+    "clean:orphaned": "tsx src/scripts/cleanOrphanedData.ts",
+    "reset:production": "tsx src/scripts/resetDatabaseForProduction.ts"
+  },
+  "keywords": [
+    "prayer",
+    "api",
+    "nodejs",
+    "typescript",
+    "prisma"
+  ],
+  "author": "Intercede Together Team",
+  "license": "MIT",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.896.0",
+    "@aws-sdk/s3-request-presigner": "^3.896.0",
+    "@prisma/client": "^5.22.0",
+    "@types/node-fetch": "^2.6.13",
+    "@types/puppeteer": "^5.4.7",
+    "axios": "^1.12.2",
+    "bcryptjs": "^2.4.3",
+    "cheerio": "^1.1.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "express-async-errors": "^3.1.1",
+    "express-rate-limit": "^7.4.1",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1",
+    "mysql2": "^3.15.1",
+    "node-cron": "^4.2.1",
+    "node-fetch": "^3.3.2",
+    "openai": "^5.23.0",
+    "puppeteer": "^24.22.3",
+    "sharp": "^0.34.4",
+    "stripe": "^18.5.0",
+    "uuid": "^13.0.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cheerio": "^0.22.35",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/multer": "^1.4.12",
+    "@types/node": "^22.8.6",
+    "@types/node-cron": "^3.0.11",
+    "@types/uuid": "^10.0.0",
+    "prisma": "^5.22.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  }
+}

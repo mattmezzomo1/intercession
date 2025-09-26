@@ -1,0 +1,353 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserType {
+  USER
+  INTERCESSOR
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  PAST_DUE
+  UNPAID
+  INCOMPLETE
+  INCOMPLETE_EXPIRED
+  TRIALING
+}
+
+enum SubscriptionPlan {
+  FREE
+  PREMIUM
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  CANCELED
+  REFUNDED
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  avatar    String?
+  password  String
+
+  // Location data
+  latitude  Float?
+  longitude Float?
+  city      String?
+  country   String?
+  timezone  String?
+
+  // User type and motivations
+  userType        UserType @default(USER)
+  userMotivations String?  // JSON array of selected motivations
+
+  // Financial data for intercessors
+  bankAccount String?
+  pixKey      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  prayerRequests  PrayerRequest[]
+  intercessions   Intercession[]
+  comments        Comment[]
+  languages       UserLanguage[]
+  prayerLogs      PrayerLog[]
+  prayerReminders PrayerReminder[]
+  subscriptions   Subscription[]
+  payments        Payment[]
+  sharedContent   SharedContent[]
+
+  @@map("users")
+}
+
+model Category {
+  id   String @id @default(cuid())
+  name String @unique
+  slug String @unique
+
+  // Relations
+  prayerRequests PrayerRequest[]
+
+  @@map("categories")
+}
+
+model PrayerRequest {
+  id        String            @id @default(cuid())
+  title     String            @default("Pedido de Oração") @db.VarChar(200)
+  content   String            @db.Text
+  urgent    Boolean           @default(false)
+  privacy   PrayerPrivacy     @default(PUBLIC)
+  status    PrayerStatus      @default(ACTIVE)
+
+  // Location data (inherited from user but can be overridden)
+  latitude  Float?
+  longitude Float?
+  city      String?
+  country   String?
+
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  // Foreign Keys
+  userId     String
+  categoryId String
+  languageId String
+
+  // Relations
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category     Category       @relation(fields: [categoryId], references: [id])
+  language     Language       @relation(fields: [languageId], references: [id])
+  images       PrayerImage[]
+  intercessions Intercession[]
+  comments     Comment[]
+  prayerLogs   PrayerLog[]
+
+  @@map("prayer_requests")
+}
+
+model PrayerImage {
+  id  String @id @default(cuid())
+  url String
+
+  // Foreign Keys
+  prayerRequestId String
+
+  // Relations
+  prayerRequest PrayerRequest @relation(fields: [prayerRequestId], references: [id], onDelete: Cascade)
+
+  @@map("prayer_images")
+}
+
+model Intercession {
+  id        String   @id @default(cuid())
+  comment   String?  @db.Text
+  createdAt DateTime @default(now())
+
+  // Foreign Keys
+  userId            String
+  prayerRequestId   String
+
+  // Relations
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  prayerRequest PrayerRequest @relation(fields: [prayerRequestId], references: [id], onDelete: Cascade)
+
+  // Prevent duplicate intercessions
+  @@unique([userId, prayerRequestId])
+  @@map("intercessions")
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Foreign Keys
+  userId          String
+  prayerRequestId String
+
+  // Relations
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  prayerRequest PrayerRequest @relation(fields: [prayerRequestId], references: [id], onDelete: Cascade)
+
+  @@map("comments")
+}
+
+model PrayerLog {
+  id        String   @id @default(cuid())
+  date      DateTime // Date when the user prayed (start of day)
+  createdAt DateTime @default(now())
+
+  // Foreign Keys
+  userId          String
+  prayerRequestId String
+
+  // Relations
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  prayerRequest PrayerRequest @relation(fields: [prayerRequestId], references: [id], onDelete: Cascade)
+
+  // Prevent duplicate prayer logs for same user, prayer request and date
+  @@unique([userId, prayerRequestId, date])
+  @@map("prayer_logs")
+}
+
+model PrayerReminder {
+  id        String   @id @default(cuid())
+  title     String
+  content   String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Foreign Keys
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("prayer_reminders")
+}
+
+model Language {
+  id       String @id @default(cuid())
+  code     String @unique // ISO 639-1 code (e.g., 'pt', 'en', 'es')
+  name     String         // Full name (e.g., 'Português', 'English', 'Español')
+  nativeName String       // Native name (e.g., 'Português', 'English', 'Español')
+
+  // Relations
+  users          UserLanguage[]
+  prayerRequests PrayerRequest[]
+  wordOfDay      WordOfDay[]
+
+  @@map("languages")
+}
+
+model UserLanguage {
+  id         String @id @default(cuid())
+  isPrimary  Boolean @default(false) // User's primary language
+
+  // Foreign Keys
+  userId     String
+  languageId String
+
+  // Relations
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  language Language @relation(fields: [languageId], references: [id], onDelete: Cascade)
+
+  // Prevent duplicate user-language combinations
+  @@unique([userId, languageId])
+  @@map("user_languages")
+}
+
+model WordOfDay {
+  id               String   @id @default(cuid())
+  date             DateTime
+  word             String
+  verse            String   @db.Text
+  reference        String
+  devotionalTitle  String
+  devotionalContent String  @db.Text
+  devotionalReflection String @db.Text
+  prayerTitle      String
+  prayerContent    String   @db.Text
+  prayerDuration   String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Foreign Keys
+  languageId       String
+
+  // Relations
+  language         Language @relation(fields: [languageId], references: [id])
+
+  // Unique constraint for date + language combination
+  @@unique([date, languageId])
+  @@map("word_of_day")
+}
+
+// Enums
+enum PrayerPrivacy {
+  PUBLIC
+  PRIVATE
+  FRIENDS
+}
+
+enum PrayerStatus {
+  ACTIVE
+  ANSWERED
+  ARCHIVED
+}
+
+model Subscription {
+  id                String             @id @default(cuid())
+  stripeSubscriptionId String?         @unique
+  stripePriceId     String
+  stripeCustomerId  String
+  status            SubscriptionStatus @default(ACTIVE)
+  plan              SubscriptionPlan   @default(PREMIUM)
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  cancelAtPeriodEnd  Boolean           @default(false)
+  canceledAt         DateTime?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  // Foreign Keys
+  userId String
+
+  // Relations
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payments Payment[]
+
+  @@map("subscriptions")
+}
+
+model Payment {
+  id                String        @id @default(cuid())
+  stripePaymentId   String?       @unique
+  stripeInvoiceId   String?       @unique
+  amount            Int           // Amount in cents
+  currency          String        @default("BRL")
+  status            PaymentStatus @default(PENDING)
+  description       String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  // Foreign Keys
+  userId         String
+  subscriptionId String?
+
+  // Relations
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+
+  @@map("payments")
+}
+
+model WebhookEvent {
+  id            String   @id @default(cuid())
+  stripeEventId String   @unique
+  eventType     String
+  processed     Boolean  @default(false)
+  data          String   @db.Text // JSON data from Stripe
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("webhook_events")
+}
+
+model SharedContent {
+  id          String            @id @default(cuid())
+  shareId     String            @unique @default(cuid()) // Public share identifier
+  contentType SharedContentType
+  contentId   String            // ID of the shared content (WordOfDay or PrayerRequest)
+  userId      String?           // User who shared (optional for anonymous sharing)
+  isActive    Boolean           @default(true)
+  expiresAt   DateTime?         // Optional expiration date
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  // Relations
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("shared_content")
+}
+
+enum SharedContentType {
+  WORD_OF_DAY
+  PRAYER_REQUEST
+}
