@@ -5,10 +5,15 @@ import { AuthenticatedRequest } from '../types';
 import { createError } from '../middleware/errorHandler';
 import { ApiResponse } from '../types';
 
-// Initialize Stripe
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-08-27.basil',
-});
+// Lazy initialization of Stripe
+const getStripe = () => {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error('STRIPE_SECRET_KEY environment variable is not set');
+  }
+  return new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: '2025-08-27.basil',
+  });
+};
 
 // Create checkout session for premium subscription
 export const createCheckoutSession = async (req: AuthenticatedRequest, res: Response) => {
@@ -29,6 +34,7 @@ export const createCheckoutSession = async (req: AuthenticatedRequest, res: Resp
     }
 
     // Create or get Stripe customer
+    const stripe = getStripe();
     let stripeCustomer;
     const existingCustomer = await stripe.customers.list({
       email: req.user!.email,
@@ -135,6 +141,7 @@ export const cancelSubscription = async (req: AuthenticatedRequest, res: Respons
 
     if (subscription.stripeSubscriptionId) {
       // Cancel at period end in Stripe
+      const stripe = getStripe();
       await stripe.subscriptions.update(subscription.stripeSubscriptionId, {
         cancel_at_period_end: true
       });
@@ -183,6 +190,7 @@ export const reactivateSubscription = async (req: AuthenticatedRequest, res: Res
 
     if (subscription.stripeSubscriptionId) {
       // Reactivate in Stripe
+      const stripe = getStripe();
       await stripe.subscriptions.update(subscription.stripeSubscriptionId, {
         cancel_at_period_end: false
       });

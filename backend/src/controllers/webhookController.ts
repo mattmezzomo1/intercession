@@ -3,12 +3,22 @@ import Stripe from 'stripe';
 import prisma from '../utils/database';
 import { createError } from '../middleware/errorHandler';
 
-// Initialize Stripe
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-08-27.basil',
-});
+// Lazy initialization of Stripe
+const getStripe = () => {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error('STRIPE_SECRET_KEY environment variable is not set');
+  }
+  return new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: '2025-08-27.basil',
+  });
+};
 
-const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET!;
+const getEndpointSecret = () => {
+  if (!process.env.STRIPE_WEBHOOK_SECRET) {
+    throw new Error('STRIPE_WEBHOOK_SECRET environment variable is not set');
+  }
+  return process.env.STRIPE_WEBHOOK_SECRET;
+};
 
 export const handleStripeWebhook = async (req: Request, res: Response) => {
   const sig = req.headers['stripe-signature'] as string;
@@ -16,6 +26,8 @@ export const handleStripeWebhook = async (req: Request, res: Response) => {
 
   try {
     // Verify webhook signature
+    const stripe = getStripe();
+    const endpointSecret = getEndpointSecret();
     event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
   } catch (err: any) {
     console.error('Webhook signature verification failed:', err.message);
@@ -108,7 +120,8 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
 
 async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
   console.log('Processing subscription created:', subscription.id);
-  
+
+  const stripe = getStripe();
   const customer = await stripe.customers.retrieve(subscription.customer as string);
   if (!customer || customer.deleted) {
     console.error('Customer not found');
@@ -174,7 +187,8 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
 
 async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
   console.log('Processing invoice payment succeeded:', invoice.id);
-  
+
+  const stripe = getStripe();
   const customer = await stripe.customers.retrieve(invoice.customer as string);
   if (!customer || customer.deleted) {
     console.error('Customer not found');
@@ -211,7 +225,8 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
 
 async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
   console.log('Processing invoice payment failed:', invoice.id);
-  
+
+  const stripe = getStripe();
   const customer = await stripe.customers.retrieve(invoice.customer as string);
   if (!customer || customer.deleted) {
     console.error('Customer not found');

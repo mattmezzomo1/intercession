@@ -1,9 +1,12 @@
+// Load environment variables first, before any other imports
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import 'express-async-errors';
-import dotenv from 'dotenv';
 
 // Import routes
 import authRoutes from './routes/auth';
@@ -28,9 +31,6 @@ import { notFound } from './middleware/notFound';
 
 // Import jobs
 import { startWordOfDayJob } from './jobs/wordOfDayJob';
-
-// Load environment variables
-dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;

@@ -4,13 +4,21 @@ import dotenv from 'dotenv';
 // Load environment variables
 dotenv.config();
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-08-27.basil',
-});
+// Initialize Stripe with proper error handling
+const getStripe = () => {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error('STRIPE_SECRET_KEY environment variable is not set');
+  }
+  return new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: '2025-08-27.basil',
+  });
+};
 
 async function setupStripeProducts() {
   try {
     console.log('🚀 Setting up Stripe products and prices...');
+
+    const stripe = getStripe();
 
     // Create Premium product
     const product = await stripe.products.create({
