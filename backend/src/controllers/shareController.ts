@@ -81,7 +81,7 @@ export const createShare = async (req: AuthenticatedRequest, res: Response) => {
   // Get the first frontend URL from the comma-separated list
   const frontendUrl = process.env.FRONTEND_URL?.split(',')[0]?.trim() || 'http://localhost:8081';
 
-  res.json({
+  return res.json({
     success: true,
     data: {
       shareId: sharedContent.shareId,

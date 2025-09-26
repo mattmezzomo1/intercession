@@ -5,7 +5,7 @@ import { createError } from '../middleware/errorHandler';
 
 // Initialize Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-06-20',
+  apiVersion: '2025-08-27.basil',
 });
 
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET!;
@@ -85,10 +85,10 @@ export const handleStripeWebhook = async (req: Request, res: Response) => {
       data: { processed: true }
     });
 
-    res.json({ received: true });
+    return res.json({ received: true });
   } catch (error: any) {
     console.error('Error processing webhook:', error);
-    res.status(500).json({ error: 'Webhook processing failed' });
+    return res.status(500).json({ error: 'Webhook processing failed' });
   }
 };
 
@@ -130,8 +130,8 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
       stripeCustomerId: subscription.customer as string,
       status: subscription.status.toUpperCase() as any,
       plan: 'PREMIUM',
-      currentPeriodStart: new Date(subscription.current_period_start * 1000),
-      currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+      currentPeriodStart: new Date((subscription as any).current_period_start * 1000),
+      currentPeriodEnd: new Date((subscription as any).current_period_end * 1000),
       cancelAtPeriodEnd: subscription.cancel_at_period_end
     }
   });
@@ -146,8 +146,8 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     where: { stripeSubscriptionId: subscription.id },
     data: {
       status: subscription.status.toUpperCase() as any,
-      currentPeriodStart: new Date(subscription.current_period_start * 1000),
-      currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+      currentPeriodStart: new Date((subscription as any).current_period_start * 1000),
+      currentPeriodEnd: new Date((subscription as any).current_period_end * 1000),
       cancelAtPeriodEnd: subscription.cancel_at_period_end,
       canceledAt: subscription.canceled_at ? new Date(subscription.canceled_at * 1000) : null,
       updatedAt: new Date()
@@ -189,7 +189,7 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
 
   // Find subscription
   const subscription = await prisma.subscription.findFirst({
-    where: { stripeSubscriptionId: invoice.subscription as string }
+    where: { stripeSubscriptionId: (invoice as any).subscription as string }
   });
 
   // Create payment record
@@ -197,7 +197,7 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
     data: {
       userId,
       subscriptionId: subscription?.id,
-      stripePaymentId: invoice.payment_intent as string,
+      stripePaymentId: (invoice as any).payment_intent as string,
       stripeInvoiceId: invoice.id,
       amount: invoice.amount_paid,
       currency: invoice.currency.toUpperCase(),
@@ -226,7 +226,7 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
 
   // Find subscription
   const subscription = await prisma.subscription.findFirst({
-    where: { stripeSubscriptionId: invoice.subscription as string }
+    where: { stripeSubscriptionId: (invoice as any).subscription as string }
   });
 
   // Create payment record
