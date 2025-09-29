@@ -13,7 +13,7 @@ export default function TestWordOfDay() {
     
     try {
       console.log('🔍 Fetching from API...');
-      const response = await fetch('http://localhost:3001/api/word-of-day/today?language=pt');
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api'}/word-of-day/today?language=pt`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

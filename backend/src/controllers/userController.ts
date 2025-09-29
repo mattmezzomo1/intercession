@@ -3,6 +3,35 @@ import prisma from '../utils/database';
 import { AuthenticatedRequest, UserStats } from '../types';
 import { createError } from '../middleware/errorHandler';
 import { updateProfileSchema } from '../utils/validation';
+import { retryWithBackoff } from '../utils/retry';
+
+// Tipos para as respostas da API Nominatim
+interface NominatimSearchResult {
+  lat: string;
+  lon: string;
+  display_name: string;
+  address?: {
+    city?: string;
+    town?: string;
+    village?: string;
+    country?: string;
+    state?: string;
+  };
+}
+
+interface NominatimReverseResult {
+  lat: string;
+  lon: string;
+  display_name: string;
+  address?: {
+    city?: string;
+    town?: string;
+    village?: string;
+    municipality?: string;
+    country?: string;
+    state?: string;
+  };
+}
 
 export const getProfile = async (req: AuthenticatedRequest, res: Response) => {
   const userId = req.user!.id;
@@ -193,20 +222,44 @@ export const geocodeCity = async (req: AuthenticatedRequest, res: Response) => {
       throw createError('City parameter is required', 400);
     }
 
-    const encodedCity = encodeURIComponent(city);
-    const url = `https://nominatim.openstreetmap.org/search?q=${encodedCity}&format=json&limit=1&addressdetails=1`;
+    console.log(`Geocoding request for city: ${city}`);
 
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'IntercedeTogetherApp/1.0'
+    // Tentar geocoding com retry
+    const data = await retryWithBackoff(
+      async () => {
+        const encodedCity = encodeURIComponent(city);
+        const url = `https://nominatim.openstreetmap.org/search?q=${encodedCity}&format=json&limit=1&addressdetails=1`;
+
+        const response = await fetch(url, {
+          headers: {
+            'User-Agent': 'IntercedeTogetherApp/1.0'
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error(`Nominatim API error: ${response.status}`);
+        }
+
+        const result = await response.json() as NominatimSearchResult[];
+
+        // Verificar se temos resultados
+        if (!result || result.length === 0) {
+          throw new Error('No results found for city');
+        }
+
+        return result;
+      },
+      {
+        maxAttempts: 3,
+        baseDelay: 1000,
+        maxDelay: 5000,
+        onRetry: (attempt, error) => {
+          console.log(`Geocoding retry ${attempt}/3 for city "${city}":`, error.message);
+        }
       }
-    });
+    );
 
-    if (!response.ok) {
-      throw createError('Geocoding service unavailable', 503);
-    }
-
-    const data = await response.json();
+    console.log(`Geocoding successful for city: ${city}`);
 
     res.json({
       success: true,
@@ -226,19 +279,54 @@ export const reverseGeocode = async (req: AuthenticatedRequest, res: Response) =
       throw createError('Latitude and longitude parameters are required', 400);
     }
 
-    const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&addressdetails=1`;
+    const latitude = parseFloat(lat);
+    const longitude = parseFloat(lon);
 
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'IntercedeTogetherApp/1.0'
-      }
-    });
-
-    if (!response.ok) {
-      throw createError('Reverse geocoding service unavailable', 503);
+    // Validar coordenadas
+    if (isNaN(latitude) || isNaN(longitude) ||
+        latitude < -90 || latitude > 90 ||
+        longitude < -180 || longitude > 180) {
+      throw createError('Invalid coordinates provided', 400);
     }
 
-    const data = await response.json();
+    console.log(`Reverse geocoding request for: ${latitude}, ${longitude}`);
+
+    // Tentar reverse geocoding com retry
+    const data = await retryWithBackoff(
+      async () => {
+        const url = `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&addressdetails=1`;
+
+        const response = await fetch(url, {
+          headers: {
+            'User-Agent': 'IntercedeTogetherApp/1.0'
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error(`Nominatim API error: ${response.status}`);
+        }
+
+        const result = await response.json() as NominatimReverseResult;
+
+        // Verificar se temos dados úteis
+        if (!result.address || (!result.address.city && !result.address.town &&
+            !result.address.village && !result.address.country)) {
+          throw new Error('No usable location data in response');
+        }
+
+        return result;
+      },
+      {
+        maxAttempts: 3,
+        baseDelay: 1000,
+        maxDelay: 5000,
+        onRetry: (attempt, error) => {
+          console.log(`Reverse geocoding retry ${attempt}/3 for ${latitude}, ${longitude}:`, error.message);
+        }
+      }
+    );
+
+    console.log(`Reverse geocoding successful for ${latitude}, ${longitude}`);
 
     res.json({
       success: true,

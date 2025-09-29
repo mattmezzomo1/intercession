@@ -53,7 +53,7 @@ export default function Register() {
         setLanguagesLoading(true);
         setLanguagesError(null);
 
-        const response = await fetch('http://localhost:3001/api/languages');
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api'}/languages`);
 
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -77,31 +77,83 @@ export default function Register() {
     fetchLanguages();
   }, []); // Empty dependency array - only run once on mount
 
-  // Get user's location
+  // Request location permission early and show status to user
+  const [locationPermissionStatus, setLocationPermissionStatus] = useState<'pending' | 'granted' | 'denied' | 'unavailable'>('pending');
+
   useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const { latitude, longitude } = position.coords;
-          
-          // Try to get city/country from coordinates (using a reverse geocoding service)
-          try {
-            // For now, we'll just store the coordinates
-            // In production, you'd use a service like Google Maps API
-            setFormData(prev => ({
-              ...prev,
-              latitude,
-              longitude
-            }));
-          } catch (error) {
-            console.error('Error getting location details:', error);
+    const requestLocationPermission = async () => {
+      if (!navigator.geolocation) {
+        setLocationPermissionStatus('unavailable');
+        return;
+      }
+
+      // Check if we already have permission
+      if ('permissions' in navigator) {
+        try {
+          const permission = await navigator.permissions.query({ name: 'geolocation' });
+
+          if (permission.state === 'granted') {
+            setLocationPermissionStatus('granted');
+          } else if (permission.state === 'denied') {
+            setLocationPermissionStatus('denied');
+          } else {
+            // Request permission by trying to get location
+            navigator.geolocation.getCurrentPosition(
+              () => {
+                setLocationPermissionStatus('granted');
+              },
+              (error) => {
+                console.error('Error getting location:', error);
+                if (error.code === error.PERMISSION_DENIED) {
+                  setLocationPermissionStatus('denied');
+                } else {
+                  setLocationPermissionStatus('denied');
+                }
+              },
+              {
+                timeout: 10000,
+                enableHighAccuracy: false,
+                maximumAge: 300000
+              }
+            );
           }
-        },
-        (error) => {
-          console.error('Error getting location:', error);
+        } catch (error) {
+          // Fallback for browsers that don't support permissions API
+          navigator.geolocation.getCurrentPosition(
+            () => {
+              setLocationPermissionStatus('granted');
+            },
+            (error) => {
+              console.error('Error getting location:', error);
+              setLocationPermissionStatus('denied');
+            },
+            {
+              timeout: 10000,
+              enableHighAccuracy: false,
+              maximumAge: 300000
+            }
+          );
         }
-      );
-    }
+      } else {
+        // Fallback for browsers that don't support permissions API
+        navigator.geolocation.getCurrentPosition(
+          () => {
+            setLocationPermissionStatus('granted');
+          },
+          (error) => {
+            console.error('Error getting location:', error);
+            setLocationPermissionStatus('denied');
+          },
+          {
+            timeout: 10000,
+            enableHighAccuracy: false,
+            maximumAge: 300000
+          }
+        );
+      }
+    };
+
+    requestLocationPermission();
   }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -195,7 +247,9 @@ export default function Register() {
 
       // Try to get current location via GPS
       try {
+        console.log('Attempting to get current location...');
         const currentLocation = await geocodingService.getCurrentLocation();
+        console.log('Current location result:', currentLocation);
 
         if (currentLocation) {
           latitude = currentLocation.latitude;
@@ -203,11 +257,23 @@ export default function Register() {
           finalCity = currentLocation.city;
           finalCountry = currentLocation.country;
 
-          toast({
-            title: "📍 Localização obtida!",
-            description: `${finalCity}, ${finalCountry}`,
-            duration: 3000,
+          console.log('Location data to be sent:', {
+            latitude,
+            longitude,
+            finalCity,
+            finalCountry
           });
+
+          const isGeneric = currentLocation.isGeneric;
+          toast({
+            title: isGeneric ? "📍 Localização aproximada obtida!" : "📍 Localização obtida!",
+            description: isGeneric
+              ? `${finalCity || 'Coordenadas'}, ${finalCountry || 'obtidas'} (aproximada)`
+              : `${finalCity || 'Coordenadas'}, ${finalCountry || 'obtidas'}`,
+            duration: isGeneric ? 4000 : 3000,
+          });
+        } else {
+          console.log('No location data received');
         }
       } catch (error) {
         console.log('Current location failed:', error);
@@ -222,23 +288,27 @@ export default function Register() {
       const isIntercessor = formData.motivations.includes('dedicated_intercessor');
       const userType = isIntercessor ? 'INTERCESSOR' : 'USER';
 
-      const response = await fetch('http://localhost:3001/api/auth/register', {
+      const payload = {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        city: finalCity || undefined,
+        country: finalCountry || undefined,
+        latitude: latitude || undefined,
+        longitude: longitude || undefined,
+        languages: formData.languages,
+        userType: userType,
+        userMotivations: JSON.stringify(formData.motivations)
+      };
+
+      console.log('Registration payload:', payload);
+
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api'}/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          name: formData.name,
-          email: formData.email,
-          password: formData.password,
-          city: finalCity || undefined,
-          country: finalCountry || undefined,
-          latitude: latitude || undefined,
-          longitude: longitude || undefined,
-          languages: formData.languages,
-          userType: userType,
-          userMotivations: JSON.stringify(formData.motivations)
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await response.json();
@@ -384,17 +454,108 @@ export default function Register() {
                 </div>
               </div>
 
-              {/* Location will be obtained via GPS only */}
-              <div className="space-y-2 p-4 bg-blue-50 dark:bg-blue-950/30 rounded-xl border border-blue-200 dark:border-blue-800">
+              {/* Location permission status */}
+              <div className={`space-y-2 p-4 rounded-xl border transition-all duration-200 ${
+                locationPermissionStatus === 'granted'
+                  ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800'
+                  : locationPermissionStatus === 'denied'
+                  ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800'
+                  : locationPermissionStatus === 'unavailable'
+                  ? 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800'
+                  : 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800'
+              }`}>
                 <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                  <Label className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                  <MapPin className={`h-4 w-4 ${
+                    locationPermissionStatus === 'granted'
+                      ? 'text-green-600 dark:text-green-400'
+                      : locationPermissionStatus === 'denied'
+                      ? 'text-amber-600 dark:text-amber-400'
+                      : locationPermissionStatus === 'unavailable'
+                      ? 'text-red-600 dark:text-red-400'
+                      : 'text-blue-600 dark:text-blue-400'
+                  }`} />
+                  <Label className={`text-sm font-medium ${
+                    locationPermissionStatus === 'granted'
+                      ? 'text-green-800 dark:text-green-200'
+                      : locationPermissionStatus === 'denied'
+                      ? 'text-amber-800 dark:text-amber-200'
+                      : locationPermissionStatus === 'unavailable'
+                      ? 'text-red-800 dark:text-red-200'
+                      : 'text-blue-800 dark:text-blue-200'
+                  }`}>
                     Localização
                   </Label>
+                  {locationPermissionStatus === 'granted' && (
+                    <span className="text-xs bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 px-2 py-1 rounded-full">
+                      ✓ Permitida
+                    </span>
+                  )}
+                  {locationPermissionStatus === 'denied' && (
+                    <span className="text-xs bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 px-2 py-1 rounded-full">
+                      ⚠ Negada
+                    </span>
+                  )}
+                  {locationPermissionStatus === 'unavailable' && (
+                    <span className="text-xs bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 px-2 py-1 rounded-full">
+                      ✗ Indisponível
+                    </span>
+                  )}
+                  {locationPermissionStatus === 'pending' && (
+                    <span className="text-xs bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-full">
+                      ⏳ Verificando...
+                    </span>
+                  )}
                 </div>
-                <p className="text-xs text-blue-700 dark:text-blue-300">
-                  Sua localização será obtida automaticamente via GPS durante o cadastro para personalizar o conteúdo.
-                </p>
+                <div className="text-xs">
+                  {locationPermissionStatus === 'granted' && (
+                    <p className="text-green-700 dark:text-green-300">
+                      Sua localização será obtida automaticamente durante o cadastro para personalizar o conteúdo.
+                    </p>
+                  )}
+                  {locationPermissionStatus === 'denied' && (
+                    <div className="space-y-2">
+                      <p className="text-amber-700 dark:text-amber-300">
+                        Permissão de localização negada. Você pode configurar sua localização manualmente depois no perfil.
+                      </p>
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs text-amber-600 dark:text-amber-400">
+                          💡 Para permitir: clique no ícone de localização na barra de endereços do navegador.
+                        </p>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="text-xs h-7 px-2 border-amber-300 text-amber-700 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-900/20"
+                          onClick={() => {
+                            setLocationPermissionStatus('pending');
+                            // Tentar novamente após um pequeno delay
+                            setTimeout(() => {
+                              if (navigator.geolocation) {
+                                navigator.geolocation.getCurrentPosition(
+                                  () => setLocationPermissionStatus('granted'),
+                                  () => setLocationPermissionStatus('denied'),
+                                  { timeout: 10000, enableHighAccuracy: false }
+                                );
+                              }
+                            }, 100);
+                          }}
+                        >
+                          Tentar novamente
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                  {locationPermissionStatus === 'unavailable' && (
+                    <p className="text-red-700 dark:text-red-300">
+                      Geolocalização não está disponível neste navegador. Você pode configurar sua localização manualmente depois no perfil.
+                    </p>
+                  )}
+                  {locationPermissionStatus === 'pending' && (
+                    <p className="text-blue-700 dark:text-blue-300">
+                      Verificando permissões de localização...
+                    </p>
+                  )}
+                </div>
               </div>
 
               <div className="space-y-3">

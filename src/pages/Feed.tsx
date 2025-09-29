@@ -93,7 +93,7 @@ export default function Feed() {
     limit: 20,
     latitude: user?.latitude,
     longitude: user?.longitude,
-    maxDistance: 50000 // 50km radius
+    maxDistance: 12000 // 12000km radius (global reach)
   });
 
   const createIntercessionMutation = useCreateIntercession();

@@ -65,9 +65,12 @@ export function EditProfileModal({ isOpen, onClose }: EditProfileModalProps) {
       if (location) {
         setLocationStatus('success');
 
+        const isGeneric = location.isGeneric;
         toast({
-          title: "📍 Localização obtida!",
-          description: `${location.city}, ${location.country}`,
+          title: isGeneric ? "📍 Localização aproximada obtida!" : "📍 Localização obtida!",
+          description: isGeneric
+            ? `${location.city}, ${location.country} (aproximada)`
+            : `${location.city}, ${location.country}`,
         });
 
         // Atualizar perfil diretamente com a nova localização

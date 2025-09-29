@@ -9,6 +9,15 @@ export const createPrayerRequest = async (req: AuthenticatedRequest, res: Respon
   const validatedData = createPrayerRequestSchema.parse(req.body);
   const userId = req.user!.id;
 
+  // Force all prayer requests to be in Portuguese for now
+  const portugueseLanguage = await prisma.language.findUnique({
+    where: { code: 'pt' }
+  });
+
+  if (!portugueseLanguage) {
+    throw createError('Portuguese language not found', 500);
+  }
+
   // If no location provided, use user's location
   let { latitude, longitude, city, country } = validatedData;
   if (!latitude || !longitude) {
@@ -16,7 +25,7 @@ export const createPrayerRequest = async (req: AuthenticatedRequest, res: Respon
       where: { id: userId },
       select: { latitude: true, longitude: true, city: true, country: true }
     });
-    
+
     latitude = latitude || user?.latitude || undefined;
     longitude = longitude || user?.longitude || undefined;
     city = city || user?.city || undefined;
@@ -31,7 +40,7 @@ export const createPrayerRequest = async (req: AuthenticatedRequest, res: Respon
       privacy: validatedData.privacy,
       userId,
       categoryId: validatedData.categoryId,
-      languageId: validatedData.languageId,
+      languageId: portugueseLanguage.id, // Always use Portuguese
       latitude,
       longitude,
       city,
@@ -71,7 +80,7 @@ export const createPrayerRequest = async (req: AuthenticatedRequest, res: Respon
 
 export const getPrayerRequests = async (req: AuthenticatedRequest, res: Response) => {
   const parsedQuery = prayerRequestQuerySchema.parse(req.query);
-  const { page = 1, limit = 10, category, urgent, status, userId, language, latitude, longitude, maxDistance = 50 } = parsedQuery;
+  const { page = 1, limit = 10, category, urgent, status, userId, language, latitude, longitude, maxDistance = 12000 } = parsedQuery;
   const currentUserId = req.user?.id;
 
   const skip = (page - 1) * limit;
@@ -102,33 +111,30 @@ export const getPrayerRequests = async (req: AuthenticatedRequest, res: Response
     }
   }
 
-  // If user is authenticated, include their languages
+  // Store user languages for filtering and sorting
+  let userLanguageIds: string[] = [];
   if (req.user && !language) {
     const userLanguages = await prisma.userLanguage.findMany({
       where: { userId: req.user.id },
       select: { languageId: true }
     });
-    
-    if (userLanguages.length > 0) {
+
+    userLanguageIds = userLanguages.map(ul => ul.languageId);
+
+    // Filter by user's languages (now that all prayers are in Portuguese, this should work)
+    if (userLanguageIds.length > 0) {
       where.languageId = {
-        in: userLanguages.map(ul => ul.languageId)
+        in: userLanguageIds
       };
     }
   }
 
   // Location-based filtering
   let orderBy: any = [{ createdAt: 'desc' }];
-  
-  if (isValidCoordinates(latitude, longitude)) {
-    // Add distance filter if maxDistance is specified
-    if (maxDistance) {
-      // This is a simplified approach - in production, you'd want to use a proper spatial query
-      where.AND = [
-        { latitude: { not: null } },
-        { longitude: { not: null } }
-      ];
-    }
-  }
+
+  // Note: We don't filter out prayers without location here
+  // Instead, we'll handle distance filtering in post-processing
+  // This ensures that prayers without location are still visible to all users
 
   const [prayerRequests, total] = await Promise.all([
     prisma.prayerRequest.findMany({
@@ -160,7 +166,7 @@ export const getPrayerRequests = async (req: AuthenticatedRequest, res: Response
     prisma.prayerRequest.count({ where })
   ]);
 
-  // Calculate distances if user location is provided
+  // Calculate distances and sort if user location is provided
   let processedRequests = prayerRequests;
   if (isValidCoordinates(latitude, longitude)) {
     processedRequests = prayerRequests
@@ -170,16 +176,42 @@ export const getPrayerRequests = async (req: AuthenticatedRequest, res: Response
           ? calculateDistance(latitude!, longitude!, request.latitude, request.longitude)
           : null
       }))
-      .filter(request => !maxDistance || !request.distance || request.distance <= maxDistance)
+      // Filter by maxDistance only for requests that have location
+      .filter(request => {
+        // Always include requests without location
+        if (!request.distance) return true;
+        // For requests with location, apply maxDistance filter
+        return !maxDistance || request.distance <= maxDistance;
+      })
       .sort((a, b) => {
-        // Sort by distance first, then by creation date
+        // First priority: User's preferred languages
+        const aIsUserLanguage = userLanguageIds.includes(a.languageId);
+        const bIsUserLanguage = userLanguageIds.includes(b.languageId);
+
+        if (aIsUserLanguage && !bIsUserLanguage) return -1;
+        if (!aIsUserLanguage && bIsUserLanguage) return 1;
+
+        // Second priority: Sort by distance (requests with location first)
         if (a.distance && b.distance) {
+          // Both have distance - sort by distance
           return a.distance - b.distance;
         }
-        if (a.distance && !b.distance) return -1;
-        if (!a.distance && b.distance) return 1;
+        if (a.distance && !b.distance) {
+          // A has distance, B doesn't - A comes first
+          return -1;
+        }
+        if (!a.distance && b.distance) {
+          // A doesn't have distance, B does - B comes first
+          return 1;
+        }
+        // Neither has distance - sort by creation date (newest first)
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       });
+  } else {
+    // User doesn't have location - just sort by creation date
+    processedRequests = prayerRequests.sort((a, b) =>
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
   }
 
   // Add hasUserInterceded flag (will be false since we filtered out interceded prayers)

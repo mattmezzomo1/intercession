@@ -7,8 +7,11 @@ import { createError } from '../middleware/errorHandler';
 import { ApiResponse } from '../types';
 
 export const register = async (req: Request, res: Response) => {
+  console.log('Registration request body:', req.body);
+
   const validatedData = registerSchema.parse(req.body);
-  
+  console.log('Validated data:', validatedData);
+
   // Check if user already exists
   const existingUser = await prisma.user.findUnique({
     where: { email: validatedData.email }
@@ -21,21 +24,26 @@ export const register = async (req: Request, res: Response) => {
   // Hash password
   const hashedPassword = await hashPassword(validatedData.password);
 
+  // Prepare user data for creation
+  const userData = {
+    email: validatedData.email,
+    name: validatedData.name,
+    password: hashedPassword,
+    avatar: validatedData.avatar,
+    latitude: validatedData.latitude,
+    longitude: validatedData.longitude,
+    city: validatedData.city,
+    country: validatedData.country,
+    timezone: validatedData.timezone,
+    userType: validatedData.userType || 'USER',
+    userMotivations: validatedData.userMotivations
+  };
+
+  console.log('User data to be created:', userData);
+
   // Create user
   const user = await prisma.user.create({
-    data: {
-      email: validatedData.email,
-      name: validatedData.name,
-      password: hashedPassword,
-      avatar: validatedData.avatar,
-      latitude: validatedData.latitude,
-      longitude: validatedData.longitude,
-      city: validatedData.city,
-      country: validatedData.country,
-      timezone: validatedData.timezone,
-      userType: validatedData.userType || 'USER',
-      userMotivations: validatedData.userMotivations
-    },
+    data: userData,
     select: {
       id: true,
       email: true,
