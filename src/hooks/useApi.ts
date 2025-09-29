@@ -119,10 +119,25 @@ export const useCreateIntercession = () => {
 
   return useMutation({
     mutationFn: apiService.createIntercession,
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
+      // Immediately update the cache to remove the prayer request from the list
+      queryClient.setQueryData(['prayerRequests'], (oldData: any) => {
+        if (!oldData?.data?.data) return oldData;
+
+        return {
+          ...oldData,
+          data: {
+            ...oldData.data,
+            data: oldData.data.data.filter((request: any) => request.id !== variables.prayerRequestId)
+          }
+        };
+      });
+
+      // Also invalidate queries to ensure fresh data
       queryClient.invalidateQueries({ queryKey: ['prayerRequests'] });
       queryClient.invalidateQueries({ queryKey: ['intercessions'] });
       queryClient.invalidateQueries({ queryKey: ['userIntercessions'] });
+
       toast({
         title: "Oração enviada! 🙏",
         description: "Sua intercessão foi registrada.",

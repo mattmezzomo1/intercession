@@ -31,7 +31,7 @@ export interface PaymentHistory {
 }
 
 class SubscriptionService {
-  private baseUrl = 'http://localhost:3001/api/subscription';
+  private baseUrl = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api'}/subscription`;
 
   async createCheckoutSession(priceId?: string): Promise<{ sessionId: string; url: string }> {
     const response = await apiService.request('/subscription/checkout', {

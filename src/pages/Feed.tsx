@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Heart, MessageCircle, MoreHorizontal, Clock, Send, Loader2, Eye, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -137,7 +137,16 @@ export default function Feed() {
     }
   };
 
-  const prayerRequests = prayerRequestsData?.data || [];
+  const [localPrayerRequests, setLocalPrayerRequests] = useState<any[]>([]);
+
+  // Update local prayer requests when data changes
+  useEffect(() => {
+    if (prayerRequestsData?.data) {
+      setLocalPrayerRequests(prayerRequestsData.data);
+    }
+  }, [prayerRequestsData?.data]);
+
+  const prayerRequests = localPrayerRequests;
 
   const handleSwipe = (direction: 'left' | 'right') => {
     if (prayerRequests.length === 0) return;
@@ -173,6 +182,10 @@ export default function Feed() {
     // Track view for ad control
     trackView();
 
+    // Remove the current request from local state immediately
+    const updatedRequests = prayerRequests.filter(req => req.id !== currentRequest.id);
+    setLocalPrayerRequests(updatedRequests);
+
     // Create intercession
     createIntercessionMutation.mutate({
       prayerRequestId: currentRequest.id,
@@ -188,7 +201,10 @@ export default function Feed() {
     }
 
     setTimeout(() => {
-      setCurrentCard(prev => (prev + 1) % prayerRequests.length);
+      // Adjust current card index if needed
+      if (updatedRequests.length > 0) {
+        setCurrentCard(prev => prev >= updatedRequests.length ? 0 : prev);
+      }
       setSwipeDirection(null);
       setComment("");
 
@@ -209,6 +225,10 @@ export default function Feed() {
     // Track view for ad control
     trackView();
 
+    // Remove the current request from local state immediately
+    const updatedRequests = prayerRequests.filter(req => req.id !== currentRequest.id);
+    setLocalPrayerRequests(updatedRequests);
+
     // Create intercession without comment
     createIntercessionMutation.mutate({
       prayerRequestId: currentRequest.id,
@@ -216,7 +236,10 @@ export default function Feed() {
     });
 
     setTimeout(() => {
-      setCurrentCard(prev => (prev + 1) % prayerRequests.length);
+      // Adjust current card index if needed
+      if (updatedRequests.length > 0) {
+        setCurrentCard(prev => prev >= updatedRequests.length ? 0 : prev);
+      }
       setSwipeDirection(null);
 
       // Check if we should show ad after prayer

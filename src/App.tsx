@@ -24,6 +24,7 @@ import SubscriptionCancel from "./pages/SubscriptionCancel";
 import TestWordOfDay from "./pages/TestWordOfDay";
 import SharedContent from "./pages/SharedContent";
 import { TabNavigation } from "./components/layout/TabNavigation";
+import { WelcomeModal } from "./components/WelcomeModal";
 
 const queryClient = new QueryClient();
 
@@ -76,7 +77,7 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 const AppContent = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, showWelcomeModal, closeWelcomeModal, user } = useAuth();
 
   return (
     <div className="min-h-screen bg-background">
@@ -184,6 +185,13 @@ const AppContent = () => {
 
       {/* Show navigation only for authenticated users */}
       {isAuthenticated && <TabNavigation />}
+
+      {/* Welcome Modal for first-time users */}
+      <WelcomeModal
+        isOpen={showWelcomeModal}
+        onClose={closeWelcomeModal}
+        userName={user?.name}
+      />
     </div>
   );
 };

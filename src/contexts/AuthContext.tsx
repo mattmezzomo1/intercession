@@ -20,10 +20,12 @@ interface AuthContextType {
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  showWelcomeModal: boolean;
   login: (token: string, user: User) => void;
   logout: () => void;
   updateUser: (user: User) => void;
   refreshUser: () => Promise<void>;
+  closeWelcomeModal: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -44,6 +46,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
 
   useEffect(() => {
     // Check for stored auth data on app start
@@ -70,13 +73,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(newUser);
     localStorage.setItem('token', newToken);
     localStorage.setItem('user', JSON.stringify(newUser));
+
+    // Check if this is the first login
+    const hasSeenWelcome = localStorage.getItem('hasSeenWelcome');
+    if (!hasSeenWelcome) {
+      setShowWelcomeModal(true);
+    }
   };
 
   const logout = () => {
     setToken(null);
     setUser(null);
+    setShowWelcomeModal(false);
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+  };
+
+  const closeWelcomeModal = () => {
+    setShowWelcomeModal(false);
+    localStorage.setItem('hasSeenWelcome', 'true');
   };
 
   const updateUser = (updatedUser: User) => {
@@ -111,10 +126,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     token,
     isAuthenticated: !!token && !!user,
     isLoading,
+    showWelcomeModal,
     login,
     logout,
     updateUser,
     refreshUser,
+    closeWelcomeModal,
   };
 
   return (
