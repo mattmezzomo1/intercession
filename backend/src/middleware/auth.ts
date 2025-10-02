@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
 import { AuthenticatedRequest, JWTPayload } from '../types';
 import { createError } from './errorHandler';
-import { getUserSubscriptionStatus } from './subscription';
+// Removido: import { getUserSubscriptionStatus } from './subscription';
 
 const prisma = new PrismaClient();
 
@@ -52,12 +52,10 @@ export const authenticate = async (
       throw createError('User not found', 401);
     }
 
-    // Get subscription status
-    const subscriptionStatus = await getUserSubscriptionStatus(user.id);
-
+    // Sistema agora é totalmente gratuito - todos os usuários são free
     req.user = user;
-    req.isPremium = subscriptionStatus.isPremium;
-    req.subscription = subscriptionStatus.subscription;
+    req.isPremium = false; // Sempre false - sistema gratuito
+    req.subscription = null;
 
     next();
   } catch (error) {
@@ -111,12 +109,10 @@ export const optionalAuth = async (
     });
 
     if (user) {
-      // Get subscription status
-      const subscriptionStatus = await getUserSubscriptionStatus(user.id);
-
+      // Sistema agora é totalmente gratuito - todos os usuários são free
       req.user = user;
-      req.isPremium = subscriptionStatus.isPremium;
-      req.subscription = subscriptionStatus.subscription;
+      req.isPremium = false; // Sempre false - sistema gratuito
+      req.subscription = null;
     }
 
     next();

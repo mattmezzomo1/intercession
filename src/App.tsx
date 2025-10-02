@@ -18,9 +18,9 @@ import Register from "./pages/Register";
 import Landing from "./pages/Landing";
 import Onboarding from "./pages/Onboarding";
 import NotFound from "./pages/NotFound";
-import Subscription from "./pages/Subscription";
-import SubscriptionSuccess from "./pages/SubscriptionSuccess";
-import SubscriptionCancel from "./pages/SubscriptionCancel";
+// Removido: import Subscription from "./pages/Subscription";
+// Removido: import SubscriptionSuccess from "./pages/SubscriptionSuccess";
+// Removido: import SubscriptionCancel from "./pages/SubscriptionCancel";
 import TestWordOfDay from "./pages/TestWordOfDay";
 import SharedContent from "./pages/SharedContent";
 import { TabNavigation } from "./components/layout/TabNavigation";
@@ -163,21 +163,7 @@ const AppContent = () => {
           </ProtectedRoute>
         } />
         <Route path="/test-word" element={<TestWordOfDay />} />
-        <Route path="/subscription" element={
-          <ProtectedRoute>
-            <Subscription />
-          </ProtectedRoute>
-        } />
-        <Route path="/subscription/success" element={
-          <ProtectedRoute>
-            <SubscriptionSuccess />
-          </ProtectedRoute>
-        } />
-        <Route path="/subscription/cancel" element={
-          <ProtectedRoute>
-            <SubscriptionCancel />
-          </ProtectedRoute>
-        } />
+        {/* Removido: Rotas de subscription - sistema agora é totalmente gratuito */}
 
         {/* Catch all route */}
         <Route path="*" element={<NotFound />} />

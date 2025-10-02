@@ -10,8 +10,8 @@ import { useCategories, useCreatePrayerRequest, useUserLanguages } from "@/hooks
 import { useAuth } from "@/contexts/AuthContext";
 import { geocodingService } from "@/services/geocoding";
 import { useAdControl } from "@/hooks/useAdControl";
-import { useCreateCheckout } from "@/hooks/useSubscription";
-import { AdWithModal } from "@/components/monetization/AdWithModal";
+// Removido: import { useCreateCheckout } from "@/hooks/useSubscription";
+// Removido: import { AdWithModal } from "@/components/monetization/AdWithModal";
 import { useToast } from "@/hooks/use-toast";
 
 const privacyOptions = [
@@ -32,9 +32,7 @@ export default function Publish() {
   const [images, setImages] = useState<string[]>([]);
 
   // Ad control
-  const { trackPost, shouldShowAd, markAdShown, isPremium } = useAdControl();
-  const [showAdModal, setShowAdModal] = useState(false);
-  const createCheckoutMutation = useCreateCheckout();
+  const { trackPost } = useAdControl();
 
   // API hooks
   const { data: categoriesData, isLoading: categoriesLoading, error: categoriesError } = useCategories();
@@ -45,16 +43,7 @@ export default function Publish() {
   const userLanguages = userLanguagesData?.data || [];
   const primaryLanguage = userLanguages.find(ul => ul.isPrimary)?.language || userLanguages[0]?.language;
 
-  // Handle ad modal actions
-  const handleCloseAdModal = () => {
-    setShowAdModal(false);
-    markAdShown();
-    navigate("/");
-  };
-
-  const handleUpgradeToPremium = async () => {
-    createCheckoutMutation.mutate();
-  };
+  // Removido: Handle ad modal actions - não precisamos mais
 
   const handleSubmit = async () => {
     if (!title.trim() || !prayerText.trim() || !selectedCategory || !primaryLanguage) return;
@@ -125,15 +114,11 @@ export default function Publish() {
 
     createPrayerRequestMutation.mutate(prayerData, {
       onSuccess: () => {
-        // Track post for ad control
+        // Track post for ad control (anúncios são mostrados automaticamente)
         trackPost();
 
-        // Show ad modal if needed (for non-premium users)
-        if (shouldShowAd && !isPremium) {
-          setShowAdModal(true);
-        } else {
-          navigate("/");
-        }
+        // Navegar de volta para home
+        navigate("/");
       }
     });
   };
@@ -320,12 +305,7 @@ export default function Publish() {
         </div>
       </div>
 
-      {/* Ad Modal */}
-      <AdWithModal
-        isOpen={showAdModal}
-        onClose={handleCloseAdModal}
-        onUpgradeToPremium={handleUpgradeToPremium}
-      />
+      {/* Removido: Ad Modal - não precisamos mais */}
     </div>
   );
 }

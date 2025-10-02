@@ -33,8 +33,8 @@ export const useAdControl = () => {
     };
   });
 
-  // Check if user is premium (no ads for premium users)
-  const isPremium = user?.isPremium || false;
+  // Todos os usuários agora veem anúncios (sistema free para todos)
+  const isPremium = false;
 
   // Save state to localStorage whenever it changes
   useEffect(() => {
@@ -43,7 +43,7 @@ export const useAdControl = () => {
 
   // Track prayer request view - Agora mostra anúncio diretamente quando necessário
   const trackView = useCallback(async () => {
-    if (isPremium) return; // No ads for premium users
+    // Todos os usuários veem anúncios agora
 
     setAdState(prev => {
       const newViewCount = prev.viewCount + 1;
@@ -71,11 +71,11 @@ export const useAdControl = () => {
         shouldShowAd: shouldShow
       };
     });
-  }, [isPremium]);
+  }, []);
 
   // Track post creation - Agora mostra anúncio diretamente
   const trackPost = useCallback(async () => {
-    if (isPremium) return; // No ads for premium users
+    // Todos os usuários veem anúncios agora
 
     setAdState(prev => ({
       ...prev,
@@ -89,7 +89,7 @@ export const useAdControl = () => {
     } catch (error) {
       console.error('Failed to show post interstitial:', error);
     }
-  }, [isPremium]);
+  }, []);
 
   // Mark ad as shown
   const markAdShown = useCallback(() => {
@@ -112,7 +112,7 @@ export const useAdControl = () => {
 
   // Mostrar anúncio sob demanda (para casos especiais)
   const showInterstitialAd = useCallback(async (): Promise<boolean> => {
-    if (isPremium) return false;
+    // Todos os usuários veem anúncios agora
 
     try {
       const success = await admobWeb.showInterstitial();
@@ -124,10 +124,10 @@ export const useAdControl = () => {
       console.error('Failed to show on-demand interstitial:', error);
       return false;
     }
-  }, [isPremium]);
+  }, []);
 
-  // Check if ad should be shown (considering premium status)
-  const shouldShowAd = !isPremium && adState.shouldShowAd;
+  // Check if ad should be shown (todos os usuários veem anúncios)
+  const shouldShowAd = adState.shouldShowAd;
 
   return {
     shouldShowAd,

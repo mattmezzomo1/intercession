@@ -11,8 +11,8 @@ import { usePrayerRequests, useCreateIntercession, useCreateComment, useCreateSh
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useAdControl } from "@/hooks/useAdControl";
-import { useCreateCheckout } from "@/hooks/useSubscription";
-import { AdWithModal } from "@/components/monetization/AdWithModal";
+// Removido: import { useCreateCheckout } from "@/hooks/useSubscription";
+// Removido: import { AdWithModal } from "@/components/monetization/AdWithModal";
 
 interface PrayerRequest {
   id: string;
@@ -83,9 +83,7 @@ export default function Feed() {
   const [comment, setComment] = useState("");
 
   // Ad control
-  const { shouldShowAd, trackView, markAdShown, isPremium } = useAdControl();
-  const [showAdModal, setShowAdModal] = useState(false);
-  const createCheckoutMutation = useCreateCheckout();
+  const { trackView } = useAdControl();
 
   // API hooks
   const { data: prayerRequestsData, isLoading, error } = usePrayerRequests({
@@ -100,15 +98,7 @@ export default function Feed() {
   const createCommentMutation = useCreateComment();
   const createShareMutation = useCreateShare();
 
-  // Handle ad modal actions
-  const handleCloseAdModal = () => {
-    setShowAdModal(false);
-    markAdShown();
-  };
-
-  const handleUpgradeToPremium = async () => {
-    createCheckoutMutation.mutate();
-  };
+  // Removido: Handle ad modal actions - não precisamos mais
 
   const handleSharePrayerRequest = async (prayerRequest: PrayerRequest) => {
     try {
@@ -165,10 +155,7 @@ export default function Feed() {
       setCurrentCard(prev => (prev + 1) % prayerRequests.length);
       setSwipeDirection(null);
 
-      // Check if we should show ad after view
-      if (shouldShowAd && !isPremium) {
-        setShowAdModal(true);
-      }
+      // Anúncios são mostrados automaticamente pelo trackView
     }, 300);
   };
 
@@ -208,10 +195,7 @@ export default function Feed() {
       setSwipeDirection(null);
       setComment("");
 
-      // Check if we should show ad after prayer
-      if (shouldShowAd && !isPremium) {
-        setShowAdModal(true);
-      }
+      // Anúncios são mostrados automaticamente pelo trackView
     }, 300);
   };
 
@@ -242,10 +226,7 @@ export default function Feed() {
       }
       setSwipeDirection(null);
 
-      // Check if we should show ad after prayer
-      if (shouldShowAd && !isPremium) {
-        setShowAdModal(true);
-      }
+      // Anúncios são mostrados automaticamente pelo trackView
     }, 300);
   };
 
@@ -506,12 +487,7 @@ export default function Feed() {
         </DialogContent>
       </Dialog>
 
-      {/* Ad Modal */}
-      <AdWithModal
-        isOpen={showAdModal}
-        onClose={handleCloseAdModal}
-        onUpgradeToPremium={handleUpgradeToPremium}
-      />
+      {/* Removido: Ad Modal - não precisamos mais */}
     </div>
   );
 }
